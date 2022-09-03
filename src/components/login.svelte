@@ -10,8 +10,8 @@
 	const schema = yup.object().shape({
 		email: yup
 			.string()
-			.required('Please enter your Email address to log in'),
-			//.email('Please enter a complete email address to log in'),
+			.required('Please enter your Email address to log in')
+			.email('Please enter a complete email address to log in'),
 		password: yup.string().required('Please enter your Password to log in'),
 		rememberme: yup.boolean().default(false)
 	});

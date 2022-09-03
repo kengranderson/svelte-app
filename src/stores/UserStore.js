@@ -127,11 +127,8 @@ function getAnonymousUser() {
         return !!jwt && !isTokenExpired(jwt);
 
         function isTokenExpired(token) {
-            // const _isTokenExpired = token => (Date.now() >= JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString()).exp * 1000);
-            // return _isTokenExpired;
-            const decodedToken = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-            const expiry = decodedToken.exp;
-            return (Math.floor((new Date).getTime() / 1000)) >= expiry;
+            const expiry = (JSON.parse(atob(token.split('.')[1]))).exp;
+            return (Math.floor((new Date).getTime() / 1000)) >= expiry;            
         }
     }
 

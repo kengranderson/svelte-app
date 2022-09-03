@@ -32,11 +32,8 @@
             <div class="sidebar">
                 <!-- Sidebar user panel (optional) -->
                 <div class="user-panel mt-3 pb-3 mb-3 d-flex" ng-show="user.authenticated">
-                    <div class="image" ng-show="user.avatar">
-                        <img ng-src="{{user.avatar}}" class="img-circle elevation-2" alt="User Image">
-                    </div>
                     <div class="info">
-                        <a href="#" class="d-block">{{user.email}}</a>
+                        <a href="#" class="d-block">{user.email}</a>
                     </div>
                 </div>
             
@@ -53,13 +50,13 @@
                         </li>
                         <li class="nav-item">
                             <a href="/points" class="nav-link">
-                                <i class="fas fa-university"></i>
+                                <i class="fas fa-dot-circle"></i>
                                 <p>Points</p>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a href="/goods" class="nav-link">
-                                <i class="fas fa-university"></i>
+                                <i class="fas fa-gift"></i>
                                 <p>Goods</p>
                             </a>
                         </li>
@@ -122,3 +119,4 @@
     <script src="%sveltekit.assets%/aws-sdk.min.js"></script>
 	</body>
 </html>
+
