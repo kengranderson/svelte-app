@@ -1,6 +1,7 @@
 import * as AmazonCognitoIdentity from 'amazon-cognito-identity-js';
 // import jwt_decode from 'jwt-decode';
 import { writable, get } from 'svelte/store';
+import { ConfigStore } from './ConfigStore';
 
 // Singleton reference to the Cognito user.
 let cognitoUser = null;
@@ -39,10 +40,10 @@ function getAnonymousUser() {
             Password: password
         };
 
-        // TODO: Secure Cognito Ids.
+        const config = ConfigStore;
         let userPool = new AmazonCognitoIdentity.CognitoUserPool({
-            UserPoolId: 'us-east-1_qGmnGFM7R',
-            ClientId: '1s3ni8mtms8vav3p3s9e8bcsei'
+            UserPoolId: config.VITE_USER_POOL_ID,
+            ClientId: config.VITE_APPLICATION_ID
         });
 
         let authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
