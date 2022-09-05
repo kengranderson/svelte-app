@@ -1,62 +1,53 @@
-﻿<div class="card card-primary card-outline">
+﻿{#if user.isAuthenticated()}
+<div class="card card-primary card-outline">
     <div class="card-header">
-        <h5 class="m-0">Wallet of: user.email</h5>
+        <h5 class="m-0">Wallet of: {user.email}</h5>
     </div>
     <div class="card-body p-0">
         <table class="table table-sm table-responsive table-bordered">
             <tr class="bg-primary">
-                <th ng-repeat="item in walletArray">item.name</th>
+                {#each Object.entries(localWallet) as [key, value]}
+                <th>{value.name}</th>
+                {/each}
             </tr>
             <tr>
-                <td class="text-right" ng-repeat="item in walletArray">item.balance</td>
+                {#each Object.entries(localWallet) as [key, value]}
+                <td class="text-right">{value.balance}</td>
+                {/each}
             </tr>
         </table>
     </div>
 </div>
+{/if}
 
 <script>
+	import { UserStore } from '../stores/UserStore';
 
-/*
-(function () {
-    'use strict';
+    $: user = $UserStore;
+    $: localWallet = $wallet;
+</script>
 
-    angular.module(appName).directive('wallet', directive);
+<script context="module">
+    import { writable } from 'svelte/store';
+    import { RewardsStore } from '../stores/RewardsStore';
 
-    function directive() {
-        return {
-            restrict: "E",
-            scope: {
-                user: '=',
-                wallet: '='
-            },
-            controller: controller,
-            templateUrl: "/components/rewards/wallet.directive.html"
-        };
-    }
+    let wallet = writable({});
+    
+    export async function wallet_get(userid, success, failure) {
+        console.log('in wallet_get');
 
-    controller.$inject = ['$scope'];
+        await RewardsStore.wallet_get(userid, 
+        (_wallet) => {
+            wallet.set(_wallet);
 
-    function controller($scope) {
-
-        $scope.$watch((scope) => {
-            return scope.wallet;
-        }, (newValue) => {
-            $scope.walletArray = toArray(newValue);
+            if (success) {
+                success(_wallet);
+            }
+        }, 
+        (error) => {
+            if (failure) {
+                failure(error);
+            }
         });
-
-        function toArray(obj) {
-            let array = [];
-
-            angular.forEach(obj, (value) => {
-                array.push({
-                    name: value.name,
-                    balance: value.balance
-                });
-            });
-
-            return array;
-        }
-    }
-})();
-*/
+    }    
 </script>

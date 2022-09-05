@@ -4,6 +4,7 @@
         <!-- Left navbar links -->
         <ul class="navbar-nav">
             <li class="nav-item">
+                <!-- svelte-ignore a11y-invalid-attribute -->
                 <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
             </li>
             <li class="nav-item d-none d-sm-inline-block">
@@ -21,7 +22,7 @@
             {#if user.isAuthenticated()}
             <div class="user-panel mt-3 pb-3 mb-3 d-flex" ng-show="user.authenticated">
                 <div class="info">
-                    <a href="#" class="d-block">{user.email}</a>
+                    <span class="d-block sidebar-username">{user.email}</span>
                 </div>
             </div>
             {/if}
@@ -68,7 +69,8 @@
                     </li>
 
                     <li class="nav-item">
-                        <a href="#" class="nav-link active" ng-click="logout()">
+                        <!-- svelte-ignore a11y-missing-attribute -->
+                        <a class="nav-link active usepointer" on:click={logout}>
                             <i class="fas fa-sign-out-alt"></i>
                             <p>
                                 Logout
@@ -111,5 +113,27 @@
 <script>
     import logo from '../AdminLTELogo.png';
 	import { UserStore } from '../stores/UserStore';
+    import { createEventDispatcher } from 'svelte';
+
     $: user = $UserStore;
+
+	const dispatch = createEventDispatcher();
+
+    const logout = () => {
+        $UserStore.logout(() => {
+            dispatch('login', {
+                user: $UserStore
+            });
+        });
+    };
 </script>
+
+<style lang="scss">
+    .usepointer {
+        cursor: pointer;
+    }
+
+    .sidebar-username {
+        color: #fff;
+    }
+</style>
