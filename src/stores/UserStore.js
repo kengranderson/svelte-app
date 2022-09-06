@@ -170,7 +170,7 @@ function getAnonymousUser() {
         }
     }
 
-    function getUsers(callback) {
+    function getUsers(callback, exceptuserid) {
         const config = ConfigStore;
 
         var params = {
@@ -193,10 +193,12 @@ function getAnonymousUser() {
                 let _users = [];
 
                 data.Users.forEach(user => {
-                    _users.push({
-                        userid: user.Username,
-                        email: user.Attributes.filter((attr) => { return attr.Name === 'email'; })[0].Value
-                    });
+                    if (!exceptuserid || user.Username != exceptuserid) {
+                        _users.push({
+                            userid: user.Username,
+                            email: user.Attributes.filter((attr) => { return attr.Name === 'email'; })[0].Value
+                        });
+                    }
                 });
 
                 callback(_users);

@@ -5,22 +5,28 @@
                 <h5 class="m-0">Other Users</h5>
             </div>
             <div class="card-body">
-                <select class="form-control" size="10" ng-model="selected" ng-change="getWallet(selected.userid)" ng-options="user as user.email for user in users track by user.userid"></select>
+                <select class="form-control" size="10" bind:value={touser} on:change="{ async () => { await getWallet(touser.userid) } }">
+                    {#each users as user}
+                    <option value={user}>
+                        {user.email}
+                    </option>
+                    {/each}
+                </select>
             </div>
         </div>
     </div>
     <div class="col-lg-6">
-        <wallet user="user" wallet="userwallet"></wallet>
-        <wallet user="selected" wallet="wallet"></wallet>
+        <Wallet bind:user={fromuser} />
+        <Wallet bind:user={touser} />
         <div class="card card-primary card-outline">
             <div class="card-header">
                 <h5 class="m-0">Transfers</h5>
             </div>
             <div class="card-body">
-                <form name="transferForm" ng-submit="transfer(transferForm)" novalidate>
+                <form on:submit|preventDefault={submitHandler}>
                     <div class="form-row">
                         <div class="col-md-6 my-1">
-                            <select ng-model="assettype" name="assettype" class="form-control" required>
+                            <select bind:value={form.assettype} class="form-control">
                                 <option value="">-- Select Asset --</option>
                                 <option value="badge">Badges</option>
                                 <option value="gift">Gifts</option>
@@ -30,12 +36,14 @@
                                 <option value="token-semt">SEMT Tokens</option>
                                 <option value="token-slsp">SLSP Tokens</option>
                             </select>
+                            {#if errors.assettype}{errors.assettype}{/if}
                         </div>
                         <div class="col-md-3 my-1">
-                            <input ng-model="quantity" name="quantity" type="number" class="form-control" min="1" step="100">
+                            <input bind:value={form.quantity} type="number" class="form-control">
+                            {#if errors.quantity}{errors.quantity}{/if}
                         </div>
                         <div class="col-md-3 my-1">
-                            <button type="submit" class="btn btn-success btn-disabled-not-allowed" ng-disabled="transferForm.$invalid || quantity < 1"><i class="fas fa-piggy-bank"></i><span> Deposit</span></button>
+                            <button type="submit" class="btn btn-success btn-disabled-not-allowed"><i class="fas fa-piggy-bank"></i><span> Deposit</span></button>
                         </div>
                     </div>
                 </form>
@@ -43,125 +51,81 @@
         </div>
     </div>
 </div>
+
 <script>
+    import { UserStore } from '../../stores/UserStore';
+    import Wallet, { getWallet } from '../../components/wallet.svelte';
+	import * as yup from 'yup';
+    import { RewardsStore } from '../../stores/RewardsStore';
 
-/*
-(function () {
-    'use strict';
+    let users = [];
+    let fromuser = $UserStore;
+    $: touser = {};
+    
+    $UserStore.getUsers((_users) => {
+        users = _users;
+        touser = users[0];
+    }, fromuser.userid);
 
-    angular.module(appName).controller('transfersController', controller);
-    controller.$inject = ['$scope', '$timeout', '$user', '$rewards', 'config'];
+	const schema = yup.object().shape({
+		assettype: yup.string().required('Please select an Asset Type'),
+		quantity: yup.number().required('Please enter a quantity').min(1, 'Quantity must be at least 1')
+	});
 
-    function controller($scope, $timeout, $user, $rewards, config) {
-        // Extend $scope.
-        angular.extend($scope, {
-            quantity: 1,
-            user: $user.user(),
-            userwallet: $rewards.emptyWallet(),
-            wallet: $rewards.emptyWallet(),
-            getWallet: getWallet,
-            transfer: transfer,
-            // All users
-            users: []
-        });
+	let form = {
+		assettype: '',
+		quantity: 1
+	};
+	let errors = {};
 
-        getUsers();
-        getUserWallet($scope.user.userid);
+	async function submitHandler() {
+		try {
+			// `abortEarly: false` to get all the errors
+			await schema.validate(form, { abortEarly: false });
+			errors = {};
 
-        function getUsers() {
-            var params = {
-                UserPoolId: config.userPoolId,
-                Limit: 60
-            };
-
-            AWS.config.update({
-                region: config.region,
-                accessKeyId: config.accessKeyId,
-                secretAccessKey: config.secretAccessKey
-            });
-
-            let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
-            cognitoidentityserviceprovider.listUsers(params, (err, data) => {
-                if (err) {
-                    console.log(err, err.stack); // an error occurred
-                }
-                else {
-                    let _users = [];
-
-                    angular.forEach(data.Users, (user) => {
-                        if (user.Username != $scope.user.userid) {
-                            _users.push({
-                                userid: user.Username,
-                                email: user.Attributes.filter((attr) => { return attr.Name === 'email'; })[0].Value
-                            });
-                        }
-                    });
-
-                    $timeout(() => {
-                        $scope.users = _users;
-                        $scope.selected = _users[0];
-                        getWallet($scope.selected.userid);
-                    }, 0);
-                }
-            });
-        }
-
-        function getWallet(userid, callback) {
-            $rewards.getWallet(userid, (wallet) => {
-                $scope.wallet = wallet;
-
-                if (callback) {
-                    callback(wallet);
-                }
-            });
-        }
-
-        function getUserWallet(userid, callback) {
-            $rewards.getWallet(userid, (wallet) => {
-                $scope.userwallet = wallet;
-
-                if (callback) {
-                    callback(wallet);
-                }
-            });
-        }
-
-        function transfer(form) {
-            let fromid = $scope.user.userid;
-            let user = $scope.selected;
-            let assettype = $scope.assettype;
-            let quantity = $scope.quantity;
+            let fromid = fromuser.userid;
+            let assettype = form.assettype;
+            let quantity = form.quantity;
 
             switch (assettype) {
                 case 'badge':
                 case 'gift':
                 case 'good':
                     // Get the assetid of the first asset of this type.
-                    $rewards.getFirstAssetTypeId(fromid, assettype, (assetid) => {
+                    console.log('calling getFirstAssetType(' + fromid + ',' + assettype + ')');
+                    await RewardsStore.getFirstAssetType(fromid, assettype, async (assetid) => {
+                        console.log('got asset id# ' + assetid);
+
                         // Send the asset to the recipient.
-                        $rewards.transferAsset(assetid, fromid, user.userid, (transactions) => {
+                        console.log('calling transferAsset(' + assetid + ',' + fromid + ',' + user.userid + ')');
+                        await RewardsStore.transferAsset(assetid, fromid, touser.userid, async (transactions) => {
+                            console.log('transferAsset succeeded');
                             console.log(transactions);
-                            getUserWallet($scope.user.userid);
-                            getWallet(user.userid, (wallet) => {
+                            
+                            await getWallet(fromid);                            
+                            await getWallet(touser.userid, (wallet) => {
                                 Swal.fire(
                                     'Asset assigned!',
-                                    'Asset assigned to ' + user.email,
+                                    'Asset assigned to ' + touser.email,
                                     'success'
                                 );
                             });
                         });
                     });
-
                     break;
 
                 case 'point':
-                    $rewards.transferAssetTypes(assettype, fromid, user.userid, quantity, (transactions) => {
+                    // Mint the Points.
+                    console.log('calling transferAssetType(' + assettype + ',' + fromid + ',' + touser.userid + ',' + quantity + ')');
+                    await RewardsStore.transferAssetType(assettype, fromid, touser.userid, quantity, async (transactions) => {
                         console.log(transactions);
-                        getUserWallet($scope.user.userid);
-                        getWallet(user.userid, (wallet) => {
+
+                        await getWallet(fromid);                            
+                        await getWallet(touser.userid, (wallet) => {
                             Swal.fire(
                                 'Points assigned!',
-                                quantity + ' Points assigned to ' + user.email,
+                                quantity + ' Points assigned to ' + touser.email,
                                 'success'
                             );
                         });
@@ -172,25 +136,30 @@
                 case 'token-semt':
                 case 'token-slsp':
                     // Send the tokens to the recipient.
-                    $rewards.transferAssetTypes(assettype, fromid, user.userid, quantity, (transactions) => {
+                    console.log('calling transferAssetType(' + assettype + ',' + fromid + ',' + touser.userid + ',' + quantity + ')');
+                    await RewardsStore.transferAssetType(assettype, fromid, touser.userid, quantity, async (transactions) => {
                         console.log(transactions);
-                        getUserWallet($scope.user.userid);
-                        getWallet(user.userid, (wallet) => {
+
+                        await getWallet(fromid);                            
+                        await getWallet(touser.userid, (wallet) => {
                             Swal.fire(
                                 'Tokens assigned!',
-                                quantity + ' Tokens assigned to ' + user.email,
+                                quantity + ' Tokens assigned to ' + touser.email,
                                 'success'
                             );
                         });
                     });
                     break;
             }
-        }
-    }
-})();
+        } catch (err) {
+			errors = extractErrors(err);
+		}
 
-
-*/
-
+		function extractErrors(err) {
+			return err.inner.reduce((acc, err) => {
+				return { ...acc, [err.path]: err.message };
+			}, {});
+		}
+	}
 
 </script>

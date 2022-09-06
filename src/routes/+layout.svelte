@@ -131,4 +131,10 @@
     .sidebar-username {
         color: #fff;
     }
+
+    :global {
+        button+span {
+            margin-left: 8px;
+        }
+    }
 </style>
