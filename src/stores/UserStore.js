@@ -1,4 +1,5 @@
 import * as AmazonCognitoIdentity from 'amazon-cognito-identity-js';
+import AWS from 'aws-sdk';
 // import jwt_decode from 'jwt-decode';
 import { writable, get } from 'svelte/store';
 import { ConfigStore } from './ConfigStore';
@@ -17,7 +18,8 @@ function getAnonymousUser() {
                 return this.given_name + ' ' + this.family_name;
             },
             logout: logout,
-            hasClaim: hasClaim
+            hasClaim: hasClaim,
+            getUsers: getUsers
         },
         ...{
             // Anonymous user properties
@@ -166,6 +168,40 @@ function getAnonymousUser() {
             UserStore.set(_user);
             callUserCallbacks(_user, success, always);
         }
+    }
+
+    function getUsers(callback) {
+        const config = ConfigStore;
+
+        var params = {
+            UserPoolId: config.VITE_USER_POOL_ID,
+            Limit: 60
+        };
+
+        AWS.config.update({
+            region: config.VITE_REGION,
+            accessKeyId: config.VITE_ACCESS_KEY_ID,
+            secretAccessKey: config.VITE_SECRET_ACCESS_KEY
+        });
+
+        let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
+        cognitoidentityserviceprovider.listUsers(params, (err, data) => {
+            if (err) {
+                console.log(err, err.stack); // an error occurred
+            }
+            else {
+                let _users = [];
+
+                data.Users.forEach(user => {
+                    _users.push({
+                        userid: user.Username,
+                        email: user.Attributes.filter((attr) => { return attr.Name === 'email'; })[0].Value
+                    });
+                });
+
+                callback(_users);
+            }
+        });
     }
 }
 

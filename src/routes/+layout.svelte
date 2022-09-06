@@ -69,8 +69,7 @@
                     </li>
 
                     <li class="nav-item">
-                        <!-- svelte-ignore a11y-missing-attribute -->
-                        <a class="nav-link active usepointer" on:click={logout}>
+                        <a href="/" class="nav-link active" on:click={logout}>
                             <i class="fas fa-sign-out-alt"></i>
                             <p>
                                 Logout
@@ -129,10 +128,6 @@
 </script>
 
 <style lang="scss">
-    .usepointer {
-        cursor: pointer;
-    }
-
     .sidebar-username {
         color: #fff;
     }

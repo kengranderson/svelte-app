@@ -1,7 +1,6 @@
-﻿{#if user.isAuthenticated()}
-<div class="card card-primary card-outline">
+﻿<div class="card card-primary card-outline">
     <div class="card-header">
-        <h5 class="m-0">Wallet of: {user.email}</h5>
+        <h5 class="m-0">Wallet of: {localUser.email}</h5>
     </div>
     <div class="card-body p-0">
         <table class="table table-sm table-responsive table-bordered">
@@ -18,12 +17,13 @@
         </table>
     </div>
 </div>
-{/if}
 
 <script>
 	import { UserStore } from '../stores/UserStore';
 
-    $: user = $UserStore;
+    // $: user = $UserStore;
+    export let user = $UserStore;
+    $: localUser = user;
     $: localWallet = $wallet;
 </script>
 
@@ -33,10 +33,10 @@
 
     let wallet = writable({});
     
-    export async function wallet_get(userid, success, failure) {
-        console.log('in wallet_get');
+    export async function getWallet(userid, success, failure) {
+        console.log('in getWallet');
 
-        await RewardsStore.wallet_get(userid, 
+        await RewardsStore.getWallet(userid, 
         (_wallet) => {
             wallet.set(_wallet);
 
