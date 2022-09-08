@@ -1,1 +1,1 @@
-<div>Purchase Points</div>>
+<div>Purchase Points</div>

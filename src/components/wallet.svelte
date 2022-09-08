@@ -1,62 +1,46 @@
 ﻿<div class="card card-primary card-outline">
     <div class="card-header">
-        <h5 class="m-0">Wallet of: user.email</h5>
+        <h5 class="m-0">Wallet of: {user.email}</h5>
     </div>
     <div class="card-body p-0">
         <table class="table table-sm table-responsive table-bordered">
             <tr class="bg-primary">
-                <th ng-repeat="item in walletArray">item.name</th>
+                {#each Object.entries($wallet) as [key, value]}
+                <th>{value.name}</th>
+                {/each}
             </tr>
             <tr>
-                <td class="text-right" ng-repeat="item in walletArray">item.balance</td>
+                {#each Object.entries($wallet) as [key, value]}
+                <td class="text-right">{value.balance}</td>
+                {/each}
             </tr>
         </table>
     </div>
 </div>
 
 <script>
+    import { writable } from 'svelte/store';
+	import { UserStore } from '../stores/UserStore';
 
-/*
-(function () {
-    'use strict';
+    export let user = $UserStore;
+    $: wallet = user.wallet || writable({});
 
-    angular.module(appName).directive('wallet', directive);
-
-    function directive() {
-        return {
-            restrict: "E",
-            scope: {
-                user: '=',
-                wallet: '='
-            },
-            controller: controller,
-            templateUrl: "/components/rewards/wallet.directive.html"
-        };
+    $: {
+        console.log('wallet set in component to:');
+        console.log(wallet);
     }
 
-    controller.$inject = ['$scope'];
+    let lastuserid = null;
 
-    function controller($scope) {
-
-        $scope.$watch((scope) => {
-            return scope.wallet;
-        }, (newValue) => {
-            $scope.walletArray = toArray(newValue);
-        });
-
-        function toArray(obj) {
-            let array = [];
-
-            angular.forEach(obj, (value) => {
-                array.push({
-                    name: value.name,
-                    balance: value.balance
-                });
-            });
-
-            return array;
+    $: if (!!user.userid) { 
+        if (user.userid != lastuserid) {
+            user.updateWallet(_updateWallet);
+            lastuserid = user.userid;
         }
     }
-})();
-*/
+
+    const _updateWallet = (_wallet) => {
+        $wallet = _wallet;
+    };
+
 </script>
