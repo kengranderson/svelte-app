@@ -1,6 +1,9 @@
 import * as AmazonCognitoIdentity from 'amazon-cognito-identity-js';
+import AWS from 'aws-sdk';
 // import jwt_decode from 'jwt-decode';
 import { writable, get } from 'svelte/store';
+import { ConfigStore } from './ConfigStore';
+import { RewardsStore } from '../stores/RewardsStore';
 
 // Singleton reference to the Cognito user.
 let cognitoUser = null;
@@ -16,7 +19,9 @@ function getAnonymousUser() {
                 return this.given_name + ' ' + this.family_name;
             },
             logout: logout,
-            hasClaim: hasClaim
+            hasClaim: hasClaim,
+            getUsers: getUsers,
+            updateWallet: updateWallet
         },
         ...{
             // Anonymous user properties
@@ -27,6 +32,7 @@ function getAnonymousUser() {
             initials: '',
             userid: null,
             groups: [],
+            wallet: writable({}),
             authenticated: false
         }
     };
@@ -39,10 +45,10 @@ function getAnonymousUser() {
             Password: password
         };
 
-        // TODO: Secure Cognito Ids.
+        const config = ConfigStore;
         let userPool = new AmazonCognitoIdentity.CognitoUserPool({
-            UserPoolId: 'us-east-1_qGmnGFM7R',
-            ClientId: '1s3ni8mtms8vav3p3s9e8bcsei'
+            UserPoolId: config.VITE_USER_POOL_ID,
+            ClientId: config.VITE_APPLICATION_ID
         });
 
         let authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
@@ -127,11 +133,8 @@ function getAnonymousUser() {
         return !!jwt && !isTokenExpired(jwt);
 
         function isTokenExpired(token) {
-            // const _isTokenExpired = token => (Date.now() >= JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString()).exp * 1000);
-            // return _isTokenExpired;
-            const decodedToken = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-            const expiry = decodedToken.exp;
-            return (Math.floor((new Date).getTime() / 1000)) >= expiry;
+            const expiry = (JSON.parse(atob(token.split('.')[1]))).exp;
+            return (Math.floor((new Date).getTime() / 1000)) >= expiry;            
         }
     }
 
@@ -168,6 +171,60 @@ function getAnonymousUser() {
             UserStore.set(_user);
             callUserCallbacks(_user, success, always);
         }
+    }
+
+    function getUsers(callback, exceptuserid) {
+        const config = ConfigStore;
+
+        var params = {
+            UserPoolId: config.VITE_USER_POOL_ID,
+            Limit: 60
+        };
+
+        AWS.config.update({
+            region: config.VITE_REGION,
+            accessKeyId: config.VITE_ACCESS_KEY_ID,
+            secretAccessKey: config.VITE_SECRET_ACCESS_KEY
+        });
+
+        let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
+        cognitoidentityserviceprovider.listUsers(params, (err, data) => {
+            if (err) {
+                console.log(err, err.stack); // an error occurred
+            }
+            else {
+                let _users = [];
+
+                data.Users.forEach(user => {
+                    if (!exceptuserid || user.Username != exceptuserid) {
+                        _users.push({
+                            ...getAnonymousUser() ,
+                            ...{
+                            userid: user.Username,
+                            email: user.Attributes.filter((attr) => { return attr.Name === 'email'; })[0].Value
+                            }
+                        });
+                    }
+                });
+
+                callback(_users);
+            }
+        });
+    }
+
+    async function updateWallet(callback) {
+        await RewardsStore.getWallet(this.userid, 
+            (wallet) => {
+                console.log('updating wallet for ' + this.userid);
+                this.wallet.set(wallet);
+
+                if (callback) {
+                    callback(wallet);
+                }
+            }, 
+            (error) => {
+                console.error(error);
+            });
     }
 }
 
