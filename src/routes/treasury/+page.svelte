@@ -5,7 +5,7 @@
                 <h5 class="m-0">Users</h5>
             </div>
             <div class="card-body">
-                <select class="form-control" size="10" bind:value={selected} on:change="{ async () => { await getWallet(selected.userid) } }">
+                <select class="form-control" size="10" bind:value={selected} on:change="{ async () => { await selected.updateWallet() } }">
                     {#each users as user}
                     <option value={user}>
                         {user.email}
@@ -52,9 +52,9 @@
 </div>
 
 <script>
-    import { UserStore } from '../../stores/UserStore';
-    import Wallet, { getWallet } from '../../components/wallet.svelte';
 	import * as yup from 'yup';
+    import { UserStore } from '../../stores/UserStore';
+    import Wallet from '../../components/wallet.svelte';
     import { RewardsStore } from '../../stores/RewardsStore';
 
     let users = [];
@@ -83,7 +83,7 @@
 			errors = {};
 
             let treasuryid = '00000000-0000-0000-0000-000000000000';
-            let user = selected;
+            let touser = selected;
             let assettype = form.assettype;
             let quantity = form.quantity;
 
@@ -102,15 +102,15 @@
                         console.log('minted asset id# ' + assetid);
 
                         // Send the asset to the recipient.
-                        console.log('calling transferAsset(' + assetid + ',' + treasuryid + ',' + user.userid + ')');
-                        await RewardsStore.transferAsset(assetid, treasuryid, user.userid, async (transactions) => {
+                        console.log('calling transferAsset(' + assetid + ',' + treasuryid + ',' + touser.userid + ')');
+                        await RewardsStore.transferAsset(assetid, treasuryid, touser.userid, async (transactions) => {
                             console.log('transferAsset succeeded');
                             console.log(transactions);
                             
-                            await getWallet(user.userid, (wallet) => {
+                            await touser.updateWallet(() => {
                                 Swal.fire(
                                     'Asset assigned!',
-                                    'Asset assigned to ' + user.email,
+                                    'Asset assigned to ' + touser.email,
                                     'success'
                                 );
                             });
@@ -126,15 +126,15 @@
                         console.log('mintPoints succeeded');
                         console.log(transaction);
 
-                        console.log('calling transferAssetType(' + assettype + ',' + treasuryid + ',' + user.userid + ',' + quantity + ')');
-                        await RewardsStore.transferAssetType(assettype, treasuryid, user.userid, quantity, async (transactions) => {
+                        console.log('calling transferAssetType(' + assettype + ',' + treasuryid + ',' + touser.userid + ',' + quantity + ')');
+                        await RewardsStore.transferAssetType(assettype, treasuryid, touser.userid, quantity, async (transactions) => {
                             console.log('transferAssetType succeeded');
                             console.log(transactions);
 
-                            await getWallet(user.userid, (wallet) => {
+                            await touser.updateWallet(() => {
                                 Swal.fire(
                                     'Points assigned!',
-                                    quantity + ' Points assigned to ' + user.email,
+                                    quantity + ' Points assigned to ' + touser.email,
                                     'success'
                                 );
                             });
@@ -154,15 +154,15 @@
                         console.log(transaction);
 
                         // Send the tokens to the recipient.
-                        console.log('calling transferAssetType(' + assettype + ',' + treasuryid + ',' + user.userid + ',' + quantity + ')');
-                        await RewardsStore.transferAssetType(assettype, treasuryid, user.userid, quantity, async (transactions) => {
+                        console.log('calling transferAssetType(' + assettype + ',' + treasuryid + ',' + touser.userid + ',' + quantity + ')');
+                        await RewardsStore.transferAssetType(assettype, treasuryid, touser.userid, quantity, async (transactions) => {
                             console.log('transferAssetType succeeded');
                             console.log(transactions);
 
-                            await getWallet(user.userid, (wallet) => {
+                            await touser.updateWallet(() => {
                                 Swal.fire(
                                     'Tokens assigned!',
-                                    quantity + ' Tokens assigned to ' + user.email,
+                                    quantity + ' Tokens assigned to ' + touser.email,
                                     'success'
                                 );
                             });

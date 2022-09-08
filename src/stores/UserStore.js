@@ -3,6 +3,7 @@ import AWS from 'aws-sdk';
 // import jwt_decode from 'jwt-decode';
 import { writable, get } from 'svelte/store';
 import { ConfigStore } from './ConfigStore';
+import { RewardsStore } from '../stores/RewardsStore';
 
 // Singleton reference to the Cognito user.
 let cognitoUser = null;
@@ -19,7 +20,8 @@ function getAnonymousUser() {
             },
             logout: logout,
             hasClaim: hasClaim,
-            getUsers: getUsers
+            getUsers: getUsers,
+            updateWallet: updateWallet
         },
         ...{
             // Anonymous user properties
@@ -30,6 +32,7 @@ function getAnonymousUser() {
             initials: '',
             userid: null,
             groups: [],
+            wallet: writable({}),
             authenticated: false
         }
     };
@@ -195,8 +198,11 @@ function getAnonymousUser() {
                 data.Users.forEach(user => {
                     if (!exceptuserid || user.Username != exceptuserid) {
                         _users.push({
+                            ...getAnonymousUser() ,
+                            ...{
                             userid: user.Username,
                             email: user.Attributes.filter((attr) => { return attr.Name === 'email'; })[0].Value
+                            }
                         });
                     }
                 });
@@ -204,6 +210,21 @@ function getAnonymousUser() {
                 callback(_users);
             }
         });
+    }
+
+    async function updateWallet(callback) {
+        await RewardsStore.getWallet(this.userid, 
+            (wallet) => {
+                console.log('updating wallet for ' + this.userid);
+                this.wallet.set(wallet);
+
+                if (callback) {
+                    callback(wallet);
+                }
+            }, 
+            (error) => {
+                console.error(error);
+            });
     }
 }
 

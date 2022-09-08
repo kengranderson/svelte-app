@@ -5,12 +5,12 @@
     <div class="card-body p-0">
         <table class="table table-sm table-responsive table-bordered">
             <tr class="bg-primary">
-                {#each Object.entries(wallet) as [key, value]}
+                {#each Object.entries($wallet) as [key, value]}
                 <th>{value.name}</th>
                 {/each}
             </tr>
             <tr>
-                {#each Object.entries(wallet) as [key, value]}
+                {#each Object.entries($wallet) as [key, value]}
                 <td class="text-right">{value.balance}</td>
                 {/each}
             </tr>
@@ -19,56 +19,28 @@
 </div>
 
 <script>
+    import { writable } from 'svelte/store';
 	import { UserStore } from '../stores/UserStore';
-//    import { writable } from 'svelte/store';
 
-    // $: user = $UserStore;
-    let wallet = {}; //writable({});
     export let user = $UserStore;
-//    $: localUser = user;
+    $: wallet = user.wallet || writable({});
 
-    $: if (!!user.userid) { 
-        let userid = user.userid;
-        
-        RewardsStore.getWallet(userid, 
-            (_wallet) => {
-                console.log('setting wallet for ' + userid);
-                wallet = _wallet;
-            }, 
-            (error) => {
-                console.error(error);
-            });
+    $: {
+        console.log('wallet set in component to:');
+        console.log(wallet);
     }
 
-//    $: localWallet = $wallet;
-</script>
+    let lastuserid = null;
 
-<script context="module">
-    import { RewardsStore } from '../stores/RewardsStore';
-    
-    export async function getWallet(userid, success, failure) {
-        console.log('in getWallet(' + userid + ')');
+    $: if (!!user.userid) { 
+        if (user.userid != lastuserid) {
+            user.updateWallet(_updateWallet);
+            lastuserid = user.userid;
+        }
+    }
 
-        await RewardsStore.getWallet(userid, 
-            (wallet) => {
-                console.log('setting wallet for ' + userid);
-                console.log(wallet);
+    const _updateWallet = (_wallet) => {
+        $wallet = _wallet;
+    };
 
-                if (success) {
-                    success(wallet);
-                }
-
-                return wallet;
-            }, 
-            (error) => {
-                console.error('getWallet error');
-                console.error(error);
-
-                if (failure) {
-                    failure(error);
-                }
-
-                return null;
-            });
-    }    
 </script>

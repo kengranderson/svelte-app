@@ -133,8 +133,8 @@
     }
 
     :global {
-        button+span {
-            margin-left: 8px;
+        i+span {
+            margin-left: 4px;
         }
     }
 </style>

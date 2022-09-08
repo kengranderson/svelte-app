@@ -5,7 +5,7 @@
                 <h5 class="m-0">Other Users</h5>
             </div>
             <div class="card-body">
-                <select class="form-control" size="10" bind:value={touser} on:change="{ async () => { await getWallet(touser.userid) } }">
+                <select class="form-control" size="10" bind:value={touser} on:change="{ async () => { await touser.updateWallet() } }">
                     {#each users as user}
                     <option value={user}>
                         {user.email}
@@ -54,7 +54,7 @@
 
 <script>
     import { UserStore } from '../../stores/UserStore';
-    import Wallet, { getWallet } from '../../components/wallet.svelte';
+    import Wallet from '../../components/wallet.svelte';
 	import * as yup from 'yup';
     import { RewardsStore } from '../../stores/RewardsStore';
 
@@ -103,8 +103,8 @@
                             console.log('transferAsset succeeded');
                             console.log(transactions);
                             
-                            await getWallet(fromid);                            
-                            await getWallet(touser.userid, (wallet) => {
+                            await fromuser.updateWallet();                            
+                            await touser.updateWallet(() => {
                                 Swal.fire(
                                     'Asset assigned!',
                                     'Asset assigned to ' + touser.email,
@@ -121,8 +121,8 @@
                     await RewardsStore.transferAssetType(assettype, fromid, touser.userid, quantity, async (transactions) => {
                         console.log(transactions);
 
-                        await getWallet(fromid);                            
-                        await getWallet(touser.userid, (wallet) => {
+                        await fromuser.updateWallet();                            
+                        await touser.updateWallet(() => {
                             Swal.fire(
                                 'Points assigned!',
                                 quantity + ' Points assigned to ' + touser.email,
@@ -140,8 +140,8 @@
                     await RewardsStore.transferAssetType(assettype, fromid, touser.userid, quantity, async (transactions) => {
                         console.log(transactions);
 
-                        await getWallet(fromid);                            
-                        await getWallet(touser.userid, (wallet) => {
+                        await fromuser.updateWallet();                            
+                        await touser.updateWallet(() => {
                             Swal.fire(
                                 'Tokens assigned!',
                                 quantity + ' Tokens assigned to ' + touser.email,
