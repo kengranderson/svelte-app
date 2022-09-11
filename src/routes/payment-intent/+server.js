@@ -4,21 +4,24 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 const stripe = new Stripe(process.env['STRIPE_SECRET_KEY']);
 
-export async function POST() {
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: 2000,
-    currency: 'usd',
-    automatic_payment_methods: {
-      enabled: true,
-    }
-  });
+export async function POST({ request }) {
+  let body = await request.json();
 
-  console.log('payment intent success!');
-  console.log(paymentIntent);
+  const paymentIntent = body.id ?
+    await stripe.paymentIntents.update(
+      body.id,
+      { amount: body.amount }
+    ) :
+    await stripe.paymentIntents.create({
+      amount: 100,
+      currency: 'usd',
+      receipt_email: 'keng@semanticdev.com',
+      automatic_payment_methods: {
+        enabled: true,
+      }
+    });
 
-  return new Response(JSON.stringify({
-      clientSecret: paymentIntent.client_secret
-  }), {
+  return new Response(JSON.stringify(paymentIntent), {
     'Content-Type': 'application/json'
   });
 }
