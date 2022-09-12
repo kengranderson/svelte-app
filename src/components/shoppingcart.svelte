@@ -3,16 +3,18 @@
 	import { loadStripe } from '@stripe/stripe-js';
 	import { Elements, PaymentElement, LinkAuthenticationElement } from 'svelte-stripe';
 	import { onMount } from 'svelte';
+	import { UserStore } from '../stores/UserStore';
 
 	let stripe = null;
-    let paymentIntent = {};
+	let paymentIntent = {};
 	let clientSecret = null;
 	let error = null;
 	let elements;
-    let processing = false;
+	let processing = false;
 
-    $: cantSubmit = processing || cart.total == 0;
+	$: cantSubmit = processing || cart.total == 0;
 
+    let user = $UserStore;
 	export let cart;
 
 	const schema = yup.object().shape({
@@ -31,18 +33,22 @@
 	let errors = {};
 
 	onMount(async () => {
-		stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+        cart.userid = user.userid;
+        cart.customerEmail = user.email;
+        cart = cart;
+
+        stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 		// create payment intent server side
 		paymentIntent = await createPaymentIntent();
-        clientSecret = paymentIntent.client_secret;
+		clientSecret = paymentIntent.client_secret;
 	});
 
-    async function quantityChanged(item) {
-        item.updateItem();
-        cart = cart;
-        console.log(cart);
-    }
+	async function quantityChanged(item) {
+		item.updateItem();
+		cart = cart;
+		console.log(cart);
+	}
 
 	async function createPaymentIntent() {
 		const response = await fetch('/payment-intent', {
@@ -70,9 +76,11 @@
 				'content-type': 'application/json'
 			},
 			body: JSON.stringify({
-                id: paymentIntent.id,
-                amount: amount
-            })
+				id: paymentIntent.id,
+				amount: amount,
+                description: cart.getDescription(),
+                metadata: generateMetadata()
+			})
 		});
 
 		if (response.ok) {
@@ -83,6 +91,25 @@
 			console.error(err);
 			return null;
 		}
+
+        function generateMetadata() {
+            let metaData = {};
+            let index = 0;
+
+            for (let i = 0; i < cart.items.length; i++) {
+                let item = cart.items[i];
+
+                if (item.quantity > 0) {
+                    ++index;
+                    metaData['sku_' + index] = item.sku;
+                    metaData['name_' + index] = item.product.name;
+                    metaData['price_' + index] = item.product.price;
+                    metaData['subtotal_' + index] = item.subtotal;
+                }
+            }
+
+            return metaData;
+        }
 	}
 
 	async function submitPayment() {
@@ -91,18 +118,18 @@
 
 		processing = true;
 
-        // Validate customer info.
-        try {
-        // `abortEarly: false` to get all the errors
-        await schema.validate(cart, { abortEarly: false });
-        errors = {};
-        } catch (err) {
+		// Validate customer info.
+		try {
+			// `abortEarly: false` to get all the errors
+			await schema.validate(cart, { abortEarly: false });
+			errors = {};
+		} catch (err) {
 			errors = extractErrors(err);
 		}
 
-        // Update PaymentIntent to reflect cart total.
-        paymentIntent = await updatePaymentIntent(cart.total);
-        clientSecret = paymentIntent.client_secret;
+		// Update PaymentIntent to reflect cart total.
+		paymentIntent = await updatePaymentIntent(cart.total);
+		clientSecret = paymentIntent.client_secret;
 
 		// confirm payment with stripe
 		const result = await stripe.confirmPayment({
@@ -120,10 +147,10 @@
 		} else {
 			// payment succeeded, redirect to "thank you" page
 			//goto('/examples/payment-element/thanks');
-            processing = false;
+			processing = false;
 
-            let paymentElement = elements.getElement('payment');
-            paymentElement.clear();
+			let paymentElement = elements.getElement('payment');
+			paymentElement.clear();
 		}
 
 		function extractErrors(err) {
@@ -145,7 +172,13 @@
 				{#each cart.items as item}
 					<tr>
 						<td>
-							<input bind:value={item.quantity} type="number" on:input={() => quantityChanged(item)} class="form-control" min="0" />
+							<input
+								bind:value={item.quantity}
+								type="number"
+								on:input={() => quantityChanged(item)}
+								class="form-control"
+								min="0"
+							/>
 						</td>
 						<td>{item.product.name}</td>
 						<td class="text-right">{item.product.priceCurrency}</td>
@@ -184,7 +217,9 @@
 								bind:value={cart.customerEmail}
 								placeholder="Email"
 							/>
-							{#if errors.customerEmail}<span class="error"><span class="error">{errors.customerEmail}</span></span>{/if}
+							{#if errors.customerEmail}<span class="error"
+									><span class="error">{errors.customerEmail}</span></span
+								>{/if}
 						</div>
 					</div>
 					<div class="form-group row">
@@ -242,28 +277,30 @@
 		</div>
 	</div>
 
-{#if stripe && clientSecret}
-	<div class="card card-primary">
-		<div class="card-header"><b>Payment Info</b></div>
-		<div class="card-body p-3">
-			<Elements
-				{stripe}
-				{clientSecret}
-				theme="none"
-				labels="floating"
-				variables={{ spacingUnit: '2px' }}
-				rules={{ '.Input': { border: 'solid 1px #0002' } }}
-				bind:elements
-			>
-                <PaymentElement />
-			</Elements>
+	{#if stripe && clientSecret}
+		<div class="card card-primary">
+			<div class="card-header"><b>Payment Info</b></div>
+			<div class="card-body p-3">
+				<Elements
+					{stripe}
+					{clientSecret}
+					theme="none"
+					labels="floating"
+					variables={{ spacingUnit: '2px' }}
+					rules={{ '.Input': { border: 'solid 1px #0002' } }}
+					bind:elements
+				>
+					<PaymentElement />
+				</Elements>
+			</div>
 		</div>
-	</div>
 
-    <div class="container-fluid p-0 mb-3">
-        <button type="submit" class="btn btn-success float-right" disabled={cantSubmit}>Purchase Points</button>
-    </div>
-{/if}
+		<div class="container-fluid p-0 mb-3">
+			<button type="submit" class="btn btn-success float-right" disabled={cantSubmit}
+				>Purchase Points</button
+			>
+		</div>
+	{/if}
 </form>
 
 <style lang="scss">
@@ -279,7 +316,7 @@
 	}
 
 	.table-shopping-cart {
-        margin-bottom: 0;
+		margin-bottom: 0;
 
 		input[type='number'] {
 			width: 60px;

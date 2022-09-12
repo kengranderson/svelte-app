@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 
 let cart = {
+    userid: null,
     customerName: '',
     customerEmail: '',
     customerAddress: '',
@@ -14,7 +15,6 @@ let cart = {
     addProduct: addProduct,
     updateProductQuantity: updateProductQuantity,
     removeProduct: removeProduct,
-    processPayment: processPayment,
     updateTotal: function () {
         let _total = 0;
 
@@ -24,6 +24,9 @@ let cart = {
 
         this.total = _total;
         this.totalCurrency = asCurrency(_total);
+    },
+    getDescription: function() {
+        return 'Owner: ' + this.customerEmail + ' (' + this.userid + ')';
     }
 };
 
@@ -85,9 +88,6 @@ function removeProduct(sku) {
     cart.items = cart.items.filter(item => item.sku !== sku);
     cart.updateTotal();  // TODO: Make sure that update after assignment does not introduce race condition for total.
     cart = cart;
-}
-
-function processPayment() {
 }
 
 export const ShoppingCartStore = writable(cart);

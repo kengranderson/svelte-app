@@ -5,7 +5,6 @@
 	import ShoppingCart from '../../components/shoppingcart.svelte';
 	import { ShoppingCartStore } from '../../stores/ShoppingCartStore';
 
-	let stripe = null;
 	let products = [];
 
 	$: cart = $ShoppingCartStore || writable({});

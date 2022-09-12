@@ -10,8 +10,11 @@ export async function POST({ request }) {
   const paymentIntent = body.id ?
     await stripe.paymentIntents.update(
       body.id,
-      { amount: body.amount }
-    ) :
+      { 
+        amount: body.amount,
+        description: body.description,
+        metadata: body.metadata
+      }) :
     await stripe.paymentIntents.create({
       amount: 100,
       currency: 'usd',
