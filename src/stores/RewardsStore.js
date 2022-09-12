@@ -4,8 +4,10 @@ const lambdaUrl = ConfigStore.VITE_LAMBDA_BASE_URL;
 
 const processResponse = async (response, success, failure) => {
     if (response.ok) {
-        const data = await response.json();
-        success(data);
+        if (success) {
+            const data = await response.json();
+            success(data);
+        }
     }
     else {
         const error = await response.text();
@@ -50,7 +52,7 @@ const mintAsset = async (assettype, metadata, success, failure) => {
     await processResponse(response, success, failure);
 }
 
-const transferAssetType = async (assettype, fromid, toid, quantity, success, failure) => {
+const transferAssetType = async (assettype, fromid, toid, quantity, paymentintentid, success, failure) => {
     const apiUrl = lambdaUrl + '/assettype/transfer';
     const response = await fetch(apiUrl, {
         method: 'POST',
@@ -59,7 +61,8 @@ const transferAssetType = async (assettype, fromid, toid, quantity, success, fai
             assettype: assettype,
             fromid: fromid,
             toid: toid,
-            quantity: quantity
+            quantity: quantity,
+            paymentintentid: paymentintentid || null
         })
     });
     await processResponse(response, success, failure);
