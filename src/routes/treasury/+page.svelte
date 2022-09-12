@@ -82,7 +82,7 @@
 			await schema.validate(form, { abortEarly: false });
 			errors = {};
 
-            let treasuryid = '00000000-0000-0000-0000-000000000000';
+            const treasuryid = '00000000-0000-0000-0000-000000000000';
             let touser = selected;
             let assettype = form.assettype;
             let quantity = form.quantity;
@@ -127,7 +127,7 @@
                         console.log(transaction);
 
                         console.log('calling transferAssetType(' + assettype + ',' + treasuryid + ',' + touser.userid + ',' + quantity + ')');
-                        await RewardsStore.transferAssetType(assettype, treasuryid, touser.userid, quantity, async (transactions) => {
+                        await RewardsStore.transferAssetType(assettype, treasuryid, touser.userid, quantity, null, async (transactions) => {
                             console.log('transferAssetType succeeded');
                             console.log(transactions);
 

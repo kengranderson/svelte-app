@@ -46,12 +46,12 @@
                             <p>Points</p>
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <!-- <li class="nav-item">
                         <a href="/goods" class="nav-link">
                             <i class="fas fa-gift"></i>
                             <p>Goods</p>
                         </a>
-                    </li>
+                    </li> -->
                     {#if user.hasClaim('treasury')}
                     <li class="nav-item">
                         <a href="/treasury" class="nav-link">
