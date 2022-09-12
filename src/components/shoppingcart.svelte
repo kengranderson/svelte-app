@@ -4,6 +4,7 @@
 	import { Elements, PaymentElement, LinkAuthenticationElement } from 'svelte-stripe';
 	import { onMount } from 'svelte';
 	import { UserStore } from '../stores/UserStore';
+	import { RewardsStore } from '../stores/RewardsStore';
 
 	let stripe = null;
 	let paymentIntent = {};
@@ -14,7 +15,7 @@
 
 	$: cantSubmit = processing || cart.total == 0;
 
-    let user = $UserStore;
+	let user = $UserStore;
 	export let cart;
 
 	const schema = yup.object().shape({
@@ -33,11 +34,11 @@
 	let errors = {};
 
 	onMount(async () => {
-        cart.userid = user.userid;
-        cart.customerEmail = user.email;
-        cart = cart;
+		cart.userid = user.userid;
+		cart.customerEmail = user.email;
+		cart = cart;
 
-        stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+		stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 		// create payment intent server side
 		paymentIntent = await createPaymentIntent();
@@ -78,8 +79,8 @@
 			body: JSON.stringify({
 				id: paymentIntent.id,
 				amount: amount,
-                description: cart.getDescription(),
-                metadata: generateMetadata()
+				description: cart.getDescription(),
+				metadata: generateMetadata()
 			})
 		});
 
@@ -92,24 +93,29 @@
 			return null;
 		}
 
-        function generateMetadata() {
-            let metaData = {};
-            let index = 0;
+		function generateMetadata() {
+			let metaData = {};
+			let index = 0;
 
-            for (let i = 0; i < cart.items.length; i++) {
-                let item = cart.items[i];
+			for (let i = 0; i < cart.items.length; i++) {
+				let item = cart.items[i];
 
-                if (item.quantity > 0) {
-                    ++index;
-                    metaData['sku_' + index] = item.sku;
-                    metaData['name_' + index] = item.product.name;
-                    metaData['price_' + index] = item.product.price;
-                    metaData['subtotal_' + index] = item.subtotal;
-                }
-            }
+				if (item.quantity > 0) {
+					++index;
+					metaData['_' + index + '_sku'] = item.sku;
+					metaData['_' + index + '_qty'] = item.quantity;
+					metaData['_' + index + '_name'] = item.product.name;
+					metaData['_' + index + '_price'] = item.product.price;
+					metaData['_' + index + '_subtotal'] = item.subtotal;
+				}
+			}
 
-            return metaData;
-        }
+			metaData['_total_points'] = cart.totalPoints;
+			metaData['_stripe_fee_amount'] = cart.stripe_fee_amount;
+			metaData['_service_fee_amount'] = cart.service_fee_amount;
+
+			return metaData;
+		}
 	}
 
 	async function submitPayment() {
@@ -143,21 +149,42 @@
 		if (result.error) {
 			// payment failed, notify user
 			error = result.error;
-			processing = false;
+			Swal.fire('Payment Error!', error, 'error');
 		} else {
-			// payment succeeded, redirect to "thank you" page
-			//goto('/examples/payment-element/thanks');
-			processing = false;
-
+			// payment succeeded, clear card form.
 			let paymentElement = elements.getElement('payment');
 			paymentElement.clear();
+
+			// Mint and send the points.
+            await mintAndSendPoints(user.userid, cart.totalPoints, paymentIntent.id);
+
+			Swal.fire(
+				'Payment Successful!',
+				cart.totalPoints + ' points purchased by ' + cart.customerEmail,
+				'success'
+			);
 		}
+
+		// Processing is complete.
+		processing = false;
 
 		function extractErrors(err) {
 			return err.inner.reduce((acc, err) => {
 				return { ...acc, [err.path]: err.message };
 			}, {});
 		}
+	}
+
+	async function mintAndSendPoints(recipientid, quantity, paymentintentid) {
+		await RewardsStore.mintPoints(quantity, async (transaction) => {
+			// Send the points to the recipient.
+			console.log('mintPoints succeeded');
+			console.log(transaction);
+            const treasuryid = '00000000-0000-0000-0000-000000000000';
+
+			await RewardsStore.transferAssetType(
+				'point', treasuryid, recipientid, quantity, paymentintentid);
+		});
 	}
 </script>
 
@@ -186,7 +213,11 @@
 					</tr>
 				{/each}
 			</tbody>
-			<tfoot>
+			<tfoot class="thead-light">
+				<tr>
+					<td colspan="3" class="text-right font-weight-bold">Service Fees:</td>
+					<td class="text-right">{cart.totalFees}</td>
+				</tr>
 				<tr>
 					<td colspan="3" class="text-right font-weight-bold">Order Total:</td>
 					<td class="text-right">{cart.totalCurrency}</td>

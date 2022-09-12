@@ -18,10 +18,10 @@
 			products.forEach((product) => {
 				cart.addProduct(product, 0);
 			});
-		}
 
 		// Trigger reactive-ness.
 		cart = cart;
+		}
 	});
 </script>
 
